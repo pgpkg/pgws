@@ -4,8 +4,8 @@ import "sync"
 
 // NotifyRouter allows websocket listeners to register themselves
 // to receive notifications. Notifications are delivered to individual
-// websockets based on team ID. There might be multiple websockets
-// registered for a single team ID, and that's OK.
+// websockets based on the audience. There might be multiple websockets
+// registered for a single audience, and that's OK.
 
 type NotifyRouter struct {
 	registrations map[string][]MessagePoster
@@ -27,12 +27,12 @@ func NewNotifyRouter() *NotifyRouter {
 	}
 }
 
-// Post posts a message to all registered channels for a team. It's OK if
-// there are no channels registered for a given team, it just means
+// Post posts a message to all registered channels for a audience. It's OK if
+// there are no channels registered for a given audience, it just means
 // nobody is listening at the moment.
-func (r *NotifyRouter) Post(team string, message []byte) {
+func (r *NotifyRouter) Post(audience string, message []byte) {
 	r.mutex.Lock()
-	posters := r.registrations[team]
+	posters := r.registrations[audience]
 	r.mutex.Unlock()
 
 	if posters == nil {
@@ -44,19 +44,21 @@ func (r *NotifyRouter) Post(team string, message []byte) {
 	}
 }
 
-// Register registers a new MessagePoster for the given team.
-func (r *NotifyRouter) Register(team string, p MessagePoster) {
+// Register registers a new MessagePoster for the given audience.
+func (r *NotifyRouter) Register(audiences []string, p MessagePoster) {
 	r.mutex.Lock()
-	r.registrations[team] = append(r.registrations[team], p)
+	for _, audience := range audiences {
+		r.registrations[audience] = append(r.registrations[audience], p)
+	}
 	r.mutex.Unlock()
 }
 
-// Unregister removes a MessagePoster from the given team.
-func (r *NotifyRouter) Unregister(team string, p MessagePoster) {
+// Unregister removes a MessagePoster from the given audience.
+func (r *NotifyRouter) Unregister(audience string, p MessagePoster) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	current := r.registrations[team]
+	current := r.registrations[audience]
 	var next []MessagePoster
 
 	for _, poster := range current {
@@ -65,5 +67,5 @@ func (r *NotifyRouter) Unregister(team string, p MessagePoster) {
 		}
 	}
 
-	r.registrations[team] = next
+	r.registrations[audience] = next
 }

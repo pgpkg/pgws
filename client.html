@@ -2,21 +2,29 @@
 
 <html>
 <head>
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura.css" media="screen"/>
+    <link rel="stylesheet" href="https://unpkg.com/sakura.css/css/sakura-dark.css"
+          media="screen and (prefers-color-scheme: dark)"/>
+
     <script>
-        const socket = new WebSocket('ws://localhost:8080/ws');
-
-        socket.addEventListener('open', event => {
-            console.log('WebSocket connection opened');
-            // socket.send('Hello, server!');
-        });
-
-        socket.addEventListener('message', event => {
-            console.log('Received message:', JSON.parse(event.data));
-        });
-
-        socket.addEventListener('close', event => {
-            console.log('WebSocket connection closed');
-        });
+        function init() {
+            const log = document.getElementById("log")
+            const socket = new WebSocket('ws://localhost:8080/ws');
+            socket.addEventListener('message', event => {
+                log.innerHTML += "<div>" + event.data + "</div>";
+            });
+        }
     </script>
 </head>
+<body onload="init()">
+    Connect to your database and type:
+    <div>
+    <pre>
+        select pg_notify('pgwebsocket', 'default,{"message": "hello, world"}');
+    </pre>
+    </div>
+    <div id="log">
+        <span>Log</span>
+    </div>
+</body>
 </html>

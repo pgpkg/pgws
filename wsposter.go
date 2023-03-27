@@ -36,7 +36,7 @@ func (ws *WSPoster) Close(code int, text string) error {
 	return nil
 }
 
-func HandleWebsocketPoster(team string, conn *websocket.Conn, n *NotifyRouter) {
+func HandleWebsocketPoster(audience []string, conn *websocket.Conn, n *NotifyRouter) {
 
 	poster := WSPoster{
 		Conn:      conn,
@@ -45,7 +45,7 @@ func HandleWebsocketPoster(team string, conn *websocket.Conn, n *NotifyRouter) {
 
 	conn.SetCloseHandler(poster.Close)
 
-	n.Register(team, &poster)
+	n.Register(audience, &poster)
 
 	// We don't care about incoming messages from the websocket, but we must
 	// perform reads in order to receive close messages. So we do this in a loop.

@@ -12,7 +12,8 @@ import (
 type PGWS struct {
 	notifyRouter *NotifyRouter
 	pqListener   *pq.Listener
-	PGChannel    string // The PG channel to LISTEN on
+	PGChannel    string                         // The PG channel to LISTEN on
+	GetAudience  func(r *http.Request) []string // returns the audience for this connection (defaults to 'default')
 }
 
 func pqlCallback(ev pq.ListenerEventType, err error) {
@@ -21,7 +22,7 @@ func pqlCallback(ev pq.ListenerEventType, err error) {
 	}
 }
 
-// listen listens for NOTIFY messages of the form "team,{...}"
+// listen listens for NOTIFY messages of the form "audience,{...}"
 // and posts them to listening websockets.
 func (pgws *PGWS) listen() {
 	err := pgws.pqListener.Listen(pgws.PGChannel)
@@ -41,11 +42,21 @@ func (pgws *PGWS) listen() {
 			continue
 		}
 
-		team := msg[:sep]
+		audience := msg[:sep]
 		payload := msg[sep+1:]
 
-		pgws.notifyRouter.Post(team, []byte(payload))
+		pgws.notifyRouter.Post(audience, []byte(payload))
 	}
+}
+
+// getAudience identifies the audience(s) for a WebSocket based on the original HTTP request.
+// Different sockets will receive a different subset of messages depending on the audience
+// they belong to. How the audience is determined is decided when the socket connects.
+func (pgws *PGWS) getAudience(r *http.Request) []string {
+	if pgws.GetAudience != nil {
+		return pgws.GetAudience(r)
+	}
+	return []string{"default"}
 }
 
 func (pgws *PGWS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +66,8 @@ func (pgws *PGWS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	HandleWebsocketPoster("test-team", conn, pgws.notifyRouter)
+	// Connect to the websocket and send messages, filtered by audience
+	HandleWebsocketPoster(pgws.getAudience(r), conn, pgws.notifyRouter)
 }
 
 func StartPGWebSocket(dsn string, minReconn time.Duration, maxReconn time.Duration, pgChannel string) *PGWS {
