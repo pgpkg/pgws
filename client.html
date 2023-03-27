@@ -1,0 +1,22 @@
+<!doctype html>
+
+<html>
+<head>
+    <script>
+        const socket = new WebSocket('ws://localhost:8080/ws');
+
+        socket.addEventListener('open', event => {
+            console.log('WebSocket connection opened');
+            // socket.send('Hello, server!');
+        });
+
+        socket.addEventListener('message', event => {
+            console.log('Received message:', JSON.parse(event.data));
+        });
+
+        socket.addEventListener('close', event => {
+            console.log('WebSocket connection closed');
+        });
+    </script>
+</head>
+</html>
