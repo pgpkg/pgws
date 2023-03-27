@@ -12,8 +12,7 @@ has been updated, or even to push the row directly to the client.
 
 ## Status
 
-`pgws` is early alpha. The API might change. There are no resource utilisation
-limits and it's likely to hang if a websocket becomes unreachable but doesn't close.
+`pgws` is early alpha. See the [TODO](TODO.md) file for a list of issues.
 
 ## Features
 

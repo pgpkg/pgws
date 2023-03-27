@@ -1,7 +1,8 @@
 # pgws todo
 
+- [ ] websocket.Upgrader removes origin checks. That's bad!
 - [ ] The MessagePoster.Post() WebSocket implementation will probably wait forever.
-      needs better monitoring.
+      needs better monitoring, queues, disconnects.
 - [ ] APIs to support JWT integration
-  - [ ] time out connection when JWT expires (maximum lifetime for a single connection)
-  - [ ] filter by audience ID for multi-tenancy
+  - [ ] timeout websocket when JWT expires (ie, set maximum lifetime for a single connection)
+  - [X] filter by audience ID for multi-tenancy
