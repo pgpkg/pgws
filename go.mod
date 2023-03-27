@@ -1,4 +1,4 @@
-module github.com/bookworkhq/pgws
+module github.com/pgpkg/pgws
 
 go 1.20
 

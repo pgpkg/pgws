@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bookworkhq/pgws"
+	"github.com/pgws/pgws"
 	"log"
 	"net/http"
 	"time"
