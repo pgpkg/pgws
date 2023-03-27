@@ -47,10 +47,9 @@ A minimal WebSocket server can be found in [cmd/pgws/main.go](cms/pgws.main.go):
 
 ### Client Side
 
-A minimal client that logs ot the console looks like this:
+A minimal client that logs to the console looks like this:
 
     <!doctype html>
-    
     <html>
     <head>
         <script>
@@ -92,15 +91,17 @@ verbatim.
 
 ## Audiences
 
-In `pgws`, an "audience" identifies the users for whom a message is intended.
+In `pgws`, an "audience" identifies the group of users for which a message is intended.
 Audiences could be used in a number of ways, but the intent was to enable efficient
 delivery of messages in multi-tenant applications. If you don't do anything,
 the only configured audience will be "default"; everyone will receive all messages
 to the "default" audience.
 
-The audience for a websocket is determined at the time of the initiating HTTP request.
-To change the audience for a socket, set the GetAudience field of the PGWS struct to
-a function that returns it:
+The audience for an incoming websocket connection is determined at the time of the
+initiating request. That is, when the browser performs a GET on the `pgws` server URL,
+you can control which audience that connection will belong to.
+
+To do this, set the GetAudience field of the PGWS struct to a function that returns it:
 
 	pgws := pgws.StartPGWebSocket("", 10*time.Second, time.Minute, "pgwebsocket")
     pgws.GetAudience = func(r *http.Request) { return []string{"noosa", "coolum"} }
@@ -111,6 +112,9 @@ but messages sent to the "noosa" and "coolum" audiences would be sent to everyon
 Of course, the intent is that you would use the `http.Request` object to determine
 the tenant ID or other attribute of the user (say, via a JWT, the URL, or a request
 header injected by your proxy), to determine which audience they belong to.
+
+Audiences are specifically designed to allow messages to be sent to selected
+websockets quickly and efficiently.
 
 ## Security
 
