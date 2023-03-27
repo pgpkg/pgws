@@ -10,10 +10,15 @@ successfully committed, but you don't need a database table to make it
 happen. This makes them perfect for telling a web client that a database row
 has been updated, or even to push the row directly to the client.
 
+## Status
+
+`pgws` is early alpha. The API might change. There are no resource utilisation
+limits and it's likely to hang if a websocket becomes unreachable but doesn't close.
+
 ## Features
 
 * Easy to use. Go Setup is a single line of code; so is pushing a message from pgsql.
-* Works with Go's `http` package using `http.Handle()`
+* Works with Go's `http` package; implements `http.Handler`
 * Audience filters - ideal for multi-tenant applications (see below).
 * Single-connection. `pgws` makes only a single database connection regardless of
   the number of websockets it's serving.
