@@ -2,50 +2,27 @@ package pgws
 
 import (
 	"fmt"
+	"github.com/fasthttp/websocket"
 	"github.com/lib/pq"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 )
 
+// PGWS represents a single websocket endpoint for a given set of
+// PG channels. You only need to create a single PG connection for a given DSN, regardless
+// of the number of websocket endpoints you create.
+//
+// PGWS implements http.Handler
+
 type PGWS struct {
-	notifyRouter *NotifyRouter
-	pqListener   *pq.Listener
-	PGChannel    string                         // The PG channel to LISTEN on
-	GetAudience  func(r *http.Request) []string // returns the audience for this connection (defaults to 'default')
+	PGChannels  []string                       // The PG channels to LISTEN on
+	Listener    *PGListener                    // The listener associated with this WS endpoint
+	GetAudience func(r *http.Request) []string // returns the audiences for this connection (defaults to 'default')
 }
 
 func pqlCallback(ev pq.ListenerEventType, err error) {
 	if err != nil {
 		fmt.Printf("pgwebsocket: WARNING: %s\n", err.Error())
-	}
-}
-
-// listen listens for NOTIFY messages of the form "audience,{...}"
-// and posts them to listening websockets.
-func (pgws *PGWS) listen() {
-	err := pgws.pqListener.Listen(pgws.PGChannel)
-	if err != nil {
-		// There's no coming back from this since we're in a goroutine.
-		// Better to explode than fail silently. We only have one job!
-		panic(err)
-	}
-
-	for n := range pgws.pqListener.Notify {
-		msg := n.Extra
-		sep := strings.Index(msg, ",{")
-
-		// Separator must exist and can only be as long as a UUID.
-		if sep == -1 || sep > 36 {
-			log.Println("invalid or missing separator in message", msg)
-			continue
-		}
-
-		audience := msg[:sep]
-		payload := msg[sep+1:]
-
-		pgws.notifyRouter.Post(audience, []byte(payload))
 	}
 }
 
@@ -59,6 +36,16 @@ func (pgws *PGWS) getAudience(r *http.Request) []string {
 	return []string{"default"}
 }
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
+// ServeHTTP accepts incoming HTTP connections, upgrades them to WebSockets,
+// and serves the websocket. It only returns when the WebSocket closes.
+// Note that there will be many calls to ServeHTTP for the same instance of PGWS.
+// A new instance of WSPoster is created for each HTTP connection we upgrade.
 func (pgws *PGWS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -66,16 +53,17 @@ func (pgws *PGWS) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Connect to the websocket and send messages, filtered by audience
-	HandleWebsocketPoster(pgws.getAudience(r), conn, pgws.notifyRouter)
+	poster := WSPoster{
+		PGWS:      pgws,
+		Conn:      conn,
+		closeChan: make(chan bool),
+	}
+	poster.ServeHTTP(w, r)
 }
 
-func StartPGWebSocket(dsn string, minReconn time.Duration, maxReconn time.Duration, pgChannel string) *PGWS {
-	pgws := &PGWS{
-		PGChannel:    pgChannel,
-		notifyRouter: NewNotifyRouter(),
-		pqListener:   pq.NewListener(dsn, minReconn, maxReconn, pqlCallback),
+func NewPGWS(listener *PGListener, pgChannels ...string) *PGWS {
+	return &PGWS{
+		Listener:   listener,
+		PGChannels: pgChannels,
 	}
-	go pgws.listen()
-	return pgws
 }

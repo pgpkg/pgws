@@ -1,7 +1,5 @@
 package pgws
 
-import "sync"
-
 // NotifyRouter allows websocket listeners to register themselves
 // to receive notifications. Notifications are delivered to individual
 // websockets based on the audience. There might be multiple websockets
@@ -9,7 +7,6 @@ import "sync"
 
 type NotifyRouter struct {
 	registrations map[string][]MessagePoster
-	mutex         sync.Mutex
 }
 
 // MessagePoster is an interface which is can be implemented by any
@@ -31,9 +28,7 @@ func NewNotifyRouter() *NotifyRouter {
 // there are no channels registered for a given audience, it just means
 // nobody is listening at the moment.
 func (r *NotifyRouter) Post(audience string, message []byte) {
-	r.mutex.Lock()
 	posters := r.registrations[audience]
-	r.mutex.Unlock()
 
 	if posters == nil {
 		return
@@ -46,26 +41,23 @@ func (r *NotifyRouter) Post(audience string, message []byte) {
 
 // Register registers a new MessagePoster for the given audience.
 func (r *NotifyRouter) Register(audiences []string, p MessagePoster) {
-	r.mutex.Lock()
 	for _, audience := range audiences {
 		r.registrations[audience] = append(r.registrations[audience], p)
 	}
-	r.mutex.Unlock()
 }
 
 // Unregister removes a MessagePoster from the given audience.
-func (r *NotifyRouter) Unregister(audience string, p MessagePoster) {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
+func (r *NotifyRouter) Unregister(audiences []string, p MessagePoster) {
+	// This could certainly be a bit more efficient.
+	for _, audience := range audiences {
+		current := r.registrations[audience]
+		var next []MessagePoster
 
-	current := r.registrations[audience]
-	var next []MessagePoster
-
-	for _, poster := range current {
-		if poster != p {
-			next = append(next, poster)
+		for _, poster := range current {
+			if poster != p {
+				next = append(next, poster)
+			}
 		}
+		r.registrations[audience] = next
 	}
-
-	r.registrations[audience] = next
 }

@@ -19,12 +19,10 @@
 <body onload="init()">
     Connect to your database and type:
     <div>
-    <pre>
-        select pg_notify('pgwebsocket', 'default,{"message": "hello, world"}');
-    </pre>
+    <pre>select pg_notify('pgws', 'default,{"message": "hello, world"}');</pre>
     </div>
     <div id="log">
-        <span>Log</span>
+        <span>Messages</span>
     </div>
 </body>
 </html>
