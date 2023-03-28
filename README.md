@@ -100,10 +100,14 @@ To send a message to the client from psql:
     
     (1 row)
 
-The client will print the message on the console.
+The simple client should then print the message on the console.
 
-> Note that the message is assumed to be JSON, but we currently just copy the object
-verbatim.
+To use the built-in JSON functions in Postgresql, you could do something
+like this:
+
+    select pg_notify('pgws', 'default,' || jsonb_build_object('message', 'hello, world')::text);
+
+`pgws` requires that the message payload is a well-formed JSON object.
 
 ## Message format
 
